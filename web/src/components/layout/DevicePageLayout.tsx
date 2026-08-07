@@ -1,5 +1,6 @@
 import { CellInformation } from '../cells/CellInformation'
 import type { DeviceData } from '../../data/mockDevices'
+import { ResizableBlock } from '../ui/ResizableBlock'
 import { Sidebar } from './Sidebar'
 import { SocEvolutionChart } from '../soc/SocEvolutionChart'
 import { SocScorecard } from '../soc/SocScorecard'
@@ -11,17 +12,42 @@ interface DevicePageLayoutProps {
 export function DevicePageLayout({ device }: DevicePageLayoutProps) {
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-80 shrink-0 border-r border-gray-200 bg-white p-6">
-        <Sidebar device={device} />
-      </aside>
+      <ResizableBlock
+        direction="horizontal"
+        defaultSize={{ width: 320 }}
+        minSize={{ width: 260 }}
+        maxSize={{ width: 420 }}
+        className="min-h-screen shrink-0 border-r border-gray-200 bg-white"
+      >
+        <aside className="h-full min-h-screen px-6 pb-6 pt-0">
+          <Sidebar device={device} />
+        </aside>
+      </ResizableBlock>
 
-      <main className="flex-1 space-y-6 p-6">
-        <SocEvolutionChart device={device} />
+      <main className="flex min-w-0 flex-1 flex-col gap-6 px-6 pb-6 pt-0">
+        <section className="shrink-0">
+          <SocEvolutionChart device={device} />
+        </section>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <SocScorecard device={device} />
-          <CellInformation device={device} />
-        </div>
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <ResizableBlock
+            direction="vertical"
+            defaultSize={{ height: 500 }}
+            minSize={{ height: 380 }}
+            maxSize={{ height: 800 }}
+          >
+            <SocScorecard device={device} className="h-full" />
+          </ResizableBlock>
+
+          <ResizableBlock
+            direction="vertical"
+            defaultSize={{ height: 500 }}
+            minSize={{ height: 380 }}
+            maxSize={{ height: 800 }}
+          >
+            <CellInformation device={device} className="h-full" />
+          </ResizableBlock>
+        </section>
       </main>
     </div>
   )

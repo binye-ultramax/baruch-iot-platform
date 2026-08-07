@@ -26,16 +26,17 @@ function MetricIcon({ metric }: { metric: ScorecardMetric }) {
 
 interface SocScorecardProps {
   device: DeviceData
+  className?: string
 }
 
-export function SocScorecard({ device }: SocScorecardProps) {
+export function SocScorecard({ device, className = '' }: SocScorecardProps) {
   const donutData = [
     { name: 'soc', value: device.soc },
     { name: 'remaining', value: 100 - device.soc },
   ]
 
   return (
-    <Card>
+    <Card className={`h-full ${className}`}>
       <h2 className="mb-6 text-lg font-semibold text-gray-900">SOC Scorecard</h2>
 
       <div className="mb-6 flex items-center gap-6">

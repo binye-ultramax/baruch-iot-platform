@@ -74,8 +74,10 @@ export function DeviceListPage() {
           </ul>
         </aside>
 
-        <main className="min-h-80 flex-1 p-4 lg:min-h-0">
-          <DeviceMap devices={devices} selectedId={selectedId} />
+        <main className="min-h-80 flex-1 px-4 pb-4 pt-0 lg:min-h-0">
+          <div className="h-full min-h-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:min-h-[calc(100vh-3rem)]">
+            <DeviceMap devices={devices} selectedId={selectedId} />
+          </div>
         </main>
       </div>
     </div>

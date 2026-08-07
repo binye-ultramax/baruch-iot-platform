@@ -16,13 +16,14 @@ function BalanceIndicator({ balance }: { balance: number }) {
 
 interface CellInformationProps {
   device: DeviceData
+  className?: string
 }
 
-export function CellInformation({ device }: CellInformationProps) {
+export function CellInformation({ device, className = '' }: CellInformationProps) {
   const stats = getCellStats(device.cells)
 
   return (
-    <Card>
+    <Card className={`h-full ${className}`}>
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Cell Information</h2>
         <span className="text-sm font-medium text-primary">{device.packLabel}</span>

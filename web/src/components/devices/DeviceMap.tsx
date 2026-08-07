@@ -20,7 +20,7 @@ export function DeviceMap({ devices, selectedId }: DeviceMapProps) {
   const center: [number, number] = [40.7484, -73.9857]
 
   return (
-    <MapContainer center={center} zoom={12} className="h-full w-full rounded-xl">
+    <MapContainer center={center} zoom={12} className="h-full w-full">
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
