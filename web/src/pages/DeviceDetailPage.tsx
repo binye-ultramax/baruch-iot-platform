@@ -13,7 +13,7 @@ export function DeviceDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-2">
         <Link
           to="/devices"
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-primary"
