@@ -49,7 +49,7 @@ const profileDetails: Record<string, UserProfileDetails> = {
     timezone: 'America/New_York (UTC-5)',
     joinedDate: '12 Jan 2023',
     lastLogin: '15 May 2025, 09:15 AM',
-    managedDevices: 24,
+    managedDevices: 25,
     notifications: {
       emailAlerts: true,
       smsAlerts: false,
@@ -63,7 +63,7 @@ const profileDetails: Record<string, UserProfileDetails> = {
     timezone: 'Europe/London (UTC+1)',
     joinedDate: '3 Mar 2024',
     lastLogin: '15 May 2025, 08:47 AM',
-    managedDevices: 12,
+    managedDevices: 13,
     notifications: {
       emailAlerts: true,
       smsAlerts: true,
@@ -84,4 +84,8 @@ export function getInitials(name: string): string {
     .join('')
     .slice(0, 2)
     .toUpperCase()
+}
+
+export function isAdministrator(user: MockUser | null): boolean {
+  return user?.role === 'Administrator'
 }
