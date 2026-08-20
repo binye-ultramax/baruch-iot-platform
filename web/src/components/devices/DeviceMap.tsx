@@ -1,4 +1,5 @@
 import L from 'leaflet'
+import { MapResizeHandler } from './MapResizeHandler'
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import { Link } from 'react-router-dom'
 import type { DeviceData } from '../../data/mockDevices'
@@ -17,10 +18,11 @@ interface DeviceMapProps {
 }
 
 export function DeviceMap({ devices, selectedId }: DeviceMapProps) {
-  const center: [number, number] = [40.7484, -73.9857]
+  const center: [number, number] = [51.5074, -0.1278]
 
   return (
-    <MapContainer center={center} zoom={12} className="h-full w-full rounded-xl">
+    <MapContainer center={center} zoom={12} className="h-full w-full min-h-[280px]">
+      <MapResizeHandler />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
