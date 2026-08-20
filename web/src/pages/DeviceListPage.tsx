@@ -5,7 +5,8 @@ import { DeviceMap } from '../components/devices/DeviceMap'
 import { AppHeader } from '../components/layout/AppHeader'
 import { Badge } from '../components/ui/Badge'
 import { useAuth } from '../context/AuthContext'
-import { devices, type DeviceStatus } from '../data/mockDevices'
+import { devices, getDevicesForUser, type DeviceStatus } from '../data/mockDevices'
+import { isAdministrator } from '../data/mockUsers'
 
 const statusStyles: Record<DeviceStatus, string> = {
   online: 'bg-green-100 text-green-700',
@@ -16,23 +17,25 @@ const statusStyles: Record<DeviceStatus, string> = {
 export function DeviceListPage() {
   const { user } = useAuth()
   const [selectedId, setSelectedId] = useState<string>()
+  const visibleDevices = user ? getDevicesForUser(user.email) : devices
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex h-dvh flex-col overflow-hidden bg-gray-50">
       <AppHeader
         title="Device Fleet"
         subtitle={`Signed in as ${user?.name} (${user?.role})`}
+        showAdminLink={isAdministrator(user)}
       />
 
-      <div className="flex flex-1 flex-col lg:flex-row">
-        <aside className="w-full border-b border-gray-200 bg-white lg:w-96 lg:border-r lg:border-b-0">
-          <div className="border-b border-gray-200 px-4 py-3">
-            <p className="text-sm font-medium text-gray-900">{devices.length} devices</p>
-            <p className="text-xs text-gray-500">All devices shown on the map</p>
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 bg-white lg:w-96 lg:border-r lg:border-b-0">
+          <div className="shrink-0 border-b border-gray-200 px-4 py-3">
+            <p className="text-sm font-medium text-gray-900">{visibleDevices.length} devices</p>
+            <p className="text-xs text-gray-500">Fleet devices and your Bluetooth monitor</p>
           </div>
 
-          <ul className="max-h-80 overflow-y-auto lg:max-h-none lg:flex-1">
-            {devices.map((device) => (
+          <ul className="max-h-48 overflow-y-auto sm:max-h-64 lg:min-h-0 lg:max-h-none lg:flex-1">
+            {visibleDevices.map((device) => (
               <li key={device.id}>
                 <Link
                   to={`/devices/${device.id}`}
@@ -74,9 +77,9 @@ export function DeviceListPage() {
           </ul>
         </aside>
 
-        <main className="min-h-80 flex-1 px-4 pb-4 pt-0 lg:min-h-0">
-          <div className="h-full min-h-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:min-h-[calc(100vh-3rem)]">
-            <DeviceMap devices={devices} selectedId={selectedId} />
+        <main className="min-h-0 flex-1 px-4 pb-4 pt-4 lg:pt-0">
+          <div className="h-full min-h-[280px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <DeviceMap devices={visibleDevices} selectedId={selectedId} />
           </div>
         </main>
       </div>

@@ -1,9 +1,9 @@
+import { BatteryInsight } from '../cells/BatteryInsight'
 import { CellInformation } from '../cells/CellInformation'
 import type { DeviceData } from '../../data/mockDevices'
 import { ResizableBlock } from '../ui/ResizableBlock'
 import { Sidebar } from './Sidebar'
 import { SocEvolutionChart } from '../soc/SocEvolutionChart'
-import { SocScorecard } from '../soc/SocScorecard'
 
 interface DevicePageLayoutProps {
   device: DeviceData
@@ -26,19 +26,14 @@ export function DevicePageLayout({ device }: DevicePageLayoutProps) {
 
       <main className="flex min-w-0 flex-1 flex-col gap-6 px-6 pb-6 pt-0">
         <section className="shrink-0">
+          <BatteryInsight device={device} />
+        </section>
+
+        <section className="shrink-0">
           <SocEvolutionChart device={device} />
         </section>
 
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <ResizableBlock
-            direction="vertical"
-            defaultSize={{ height: 500 }}
-            minSize={{ height: 380 }}
-            maxSize={{ height: 800 }}
-          >
-            <SocScorecard device={device} className="h-full" />
-          </ResizableBlock>
-
+        <section className="shrink-0">
           <ResizableBlock
             direction="vertical"
             defaultSize={{ height: 500 }}

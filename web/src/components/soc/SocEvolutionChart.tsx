@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Battery } from 'lucide-react'
 import {
   Area,
   AreaChart,
@@ -11,7 +11,7 @@ import {
 import type { DeviceData } from '../../data/mockDevices'
 import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
-import { ToggleSwitch } from '../ui/ToggleSwitch'
+import { ProgressBar } from '../ui/ProgressBar'
 
 interface SocEvolutionChartProps {
   device: DeviceData
@@ -19,29 +19,12 @@ interface SocEvolutionChartProps {
 }
 
 export function SocEvolutionChart({ device, className = '' }: SocEvolutionChartProps) {
-  const [currentDevice, setCurrentDevice] = useState(true)
-  const [fleetDevices, setFleetDevices] = useState(false)
-
   return (
     <Card className={`pt-3 ${className}`}>
-      <div className="mb-1 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">SOC Evolution</h2>
-          <div className="mt-2 flex flex-wrap gap-4">
-            <ToggleSwitch
-              label="Current device"
-              checked={currentDevice}
-              onChange={setCurrentDevice}
-            />
-            <ToggleSwitch
-              label="Fleet devices"
-              checked={fleetDevices}
-              onChange={setFleetDevices}
-            />
-          </div>
-        </div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <h2 className="text-lg font-semibold text-gray-900">SOC Evolution</h2>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <div className="rounded-lg border border-gray-200 px-4 py-2 text-center">
             <p className="text-xs text-gray-500">Current SOC</p>
             <Badge>{device.soc}%</Badge>
@@ -50,7 +33,20 @@ export function SocEvolutionChart({ device, className = '' }: SocEvolutionChartP
             <p className="text-xs text-gray-500">Operating time estimate</p>
             <p className="text-sm font-semibold text-gray-900">{device.runtimeHours} h</p>
           </div>
+          <div className="rounded-lg border border-gray-200 px-4 py-2">
+            <p className="text-xs text-gray-500">Battery energy</p>
+            <div className="mt-1 flex items-center gap-2">
+              <Battery className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-gray-900">
+                {device.energyKwh} / {device.capacityKwh} kWh
+              </span>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <ProgressBar value={device.soc} />
       </div>
 
       <div className="w-full">
@@ -71,6 +67,7 @@ export function SocEvolutionChart({ device, className = '' }: SocEvolutionChartP
               tick={{ fontSize: 12, fill: '#9ca3af' }}
               axisLine={false}
               tickLine={false}
+              ticks={[0, 4, 8, 12, 16, 20, 24]}
               label={{
                 value: 'Time (hours)',
                 position: 'bottom',
@@ -99,11 +96,13 @@ export function SocEvolutionChart({ device, className = '' }: SocEvolutionChartP
               labelFormatter={(hour) => `${hour} h`}
             />
             <Area
-              type="monotone"
+              type="linear"
               dataKey="soc"
               stroke="#6366f1"
               strokeWidth={2}
               fill="url(#socGradient)"
+              dot={false}
+              activeDot={{ r: 4 }}
             />
           </AreaChart>
         </ResponsiveContainer>

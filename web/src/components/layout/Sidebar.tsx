@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 import { Router } from 'lucide-react'
 import type { DeviceData } from '../../data/mockDevices'
 import { Accordion, DetailRow } from '../ui/Accordion'
-import { Badge } from '../ui/Badge'
-import { SegmentedBattery } from '../ui/SegmentedBattery'
+import { DeviceActionPanel } from './DeviceActionPanel'
+import { DeviceHealthSummary } from './DeviceHealthSummary'
 
 interface SidebarProps {
   device: DeviceData
@@ -33,18 +33,9 @@ export function Sidebar({ device }: SidebarProps) {
         </div>
       </div>
 
-      <div className="mb-6 rounded-lg bg-gray-50 p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">State of Charge</span>
-          <Badge>{device.soc}%</Badge>
-        </div>
-        <SegmentedBattery percent={device.soc} />
-      </div>
+      <DeviceHealthSummary device={device} />
 
-      <div className="mb-6 space-y-2 text-sm text-gray-500">
-        <p>Last data update: {device.lastUpdate}</p>
-        <p>Associated group: {device.group}</p>
-      </div>
+      <DeviceActionPanel device={device} />
 
       <div className="mt-auto space-y-1">
         <Accordion title="Device details" defaultOpen>
