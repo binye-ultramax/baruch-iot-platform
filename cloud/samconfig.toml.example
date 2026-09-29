@@ -1,0 +1,10 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "baruch-auth"
+resolve_s3 = true
+s3_prefix = "baruch-auth"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "CorsOrigin=\"*\""

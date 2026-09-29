@@ -1,0 +1,296 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Baruch auth API. Register, confirm, and login against a Cognito user pool.
+
+Parameters:
+  CorsOrigin:
+    Type: String
+    Default: '*'
+    Description: Single browser origin allowed to call the API, or * for any origin.
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    Timeout: 10
+    MemorySize: 256
+    CodeUri: .
+    Tags:
+      Project: baruch-iot-platform
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-users'
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+      AutoVerifiedAttributes:
+        - email
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      # Email is the username, so Cognito already requires it. Do not repeat it here.
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      LambdaConfig:
+        PostConfirmation: !GetAtt PostConfirmationFunction.Arn
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate:
+          - email
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${AWS::StackName}-auth'
+      UserPoolId: !Ref UserPool
+      GenerateSecret: true
+      PreventUserExistenceErrors: ENABLED
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+      AllowedOAuthFlowsUserPoolClient: false
+      ReadAttributes:
+        - email
+        - name
+      WriteAttributes:
+        - email
+        - name
+
+  OperatorGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: Operator
+      Description: Fleet operators. Self-service registration joins this group.
+      Precedence: 10
+
+  AdministratorGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: Administrator
+      Description: Platform administrators. Assign membership outside self-service registration.
+      Precedence: 1
+
+  AuthApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref CorsOrigin
+        AllowHeaders:
+          - content-type
+          - authorization
+        AllowMethods:
+          - POST
+          - OPTIONS
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+
+  RegisterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-register'
+      Handler: src/auth/register.handler
+      Description: Creates a Cognito user and sends an email confirmation code.
+      Environment:
+        Variables:
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          USER_POOL_CLIENT_SECRET: !GetAtt UserPoolClient.ClientSecret
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:SignUp
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /auth/register
+            PayloadFormatVersion: '2.0'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/auth/register.ts
+        Target: es2022
+        Format: cjs
+        Minify: false
+        Sourcemap: false
+        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
+        OutExtension:
+          - .js=.cjs
+
+  ConfirmFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-confirm'
+      Handler: src/auth/confirm.handler
+      Description: Confirms a newly registered user with the emailed code.
+      Environment:
+        Variables:
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          USER_POOL_CLIENT_SECRET: !GetAtt UserPoolClient.ClientSecret
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:ConfirmSignUp
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /auth/confirm
+            PayloadFormatVersion: '2.0'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/auth/confirm.ts
+        Target: es2022
+        Format: cjs
+        Minify: false
+        Sourcemap: false
+        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
+        OutExtension:
+          - .js=.cjs
+
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-login'
+      Handler: src/auth/login.handler
+      Description: Signs a confirmed user in and returns tokens plus their role.
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          USER_POOL_CLIENT_SECRET: !GetAtt UserPoolClient.ClientSecret
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminInitiateAuth
+                - cognito-idp:AdminListGroupsForUser
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /auth/login
+            PayloadFormatVersion: '2.0'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/auth/login.ts
+        Target: es2022
+        Format: cjs
+        Minify: false
+        Sourcemap: false
+        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
+        OutExtension:
+          - .js=.cjs
+
+  PostConfirmationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  PostConfirmationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-post-confirmation'
+      Handler: src/auth/postConfirmation.handler
+      Description: Adds a confirmed self-service user to the Operator group.
+      Role: !GetAtt PostConfirmationRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/auth/postConfirmation.ts
+        Target: es2022
+        Format: cjs
+        Minify: false
+        Sourcemap: false
+        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
+        OutExtension:
+          - .js=.cjs
+
+  # Separate policy so this function does not depend on the user pool.
+  # The user pool invokes the function, so an inline policy on the function would cycle.
+  PostConfirmationCognitoPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: PostConfirmationCognito
+      Roles:
+        - !Ref PostConfirmationRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - cognito-idp:AdminAddUserToGroup
+              - cognito-idp:AdminListGroupsForUser
+            Resource: !GetAtt UserPool.Arn
+
+  PostConfirmationInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PostConfirmationFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
+
+Outputs:
+  AuthApiUrl:
+    Description: Base URL for the auth routes.
+    Value: !GetAtt AuthApi.ApiEndpoint
+  UserPoolId:
+    Description: Cognito user pool id.
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Cognito app client id. The client secret stays in the Lambda environment.
+    Value: !Ref UserPoolClient

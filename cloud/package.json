@@ -1,0 +1,21 @@
+{
+  "name": "baruch-cloud",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/shared/errors.test.ts src/shared/http.test.ts src/shared/roles.test.ts src/shared/secretHash.test.ts src/shared/validate.test.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.901.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^22.19.0",
+    "typescript": "~6.0.2"
+  }
+}
