@@ -10,12 +10,12 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: nodejs22.x
+    Runtime: python3.12
     Architectures:
       - arm64
     Timeout: 10
     MemorySize: 256
-    CodeUri: .
+    CodeUri: src
     Tags:
       Project: baruch-iot-platform
 
@@ -114,7 +114,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-register'
-      Handler: src/auth/register.handler
+      Handler: auth.register.handler
       Description: Creates a Cognito user and sends an email confirmation code.
       Environment:
         Variables:
@@ -135,24 +135,12 @@ Resources:
             Method: POST
             Path: /auth/register
             PayloadFormatVersion: '2.0'
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        EntryPoints:
-          - src/auth/register.ts
-        Target: es2022
-        Format: cjs
-        Minify: false
-        Sourcemap: false
-        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
-        OutExtension:
-          - .js=.cjs
 
   ConfirmFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-confirm'
-      Handler: src/auth/confirm.handler
+      Handler: auth.confirm.handler
       Description: Confirms a newly registered user with the emailed code.
       Environment:
         Variables:
@@ -173,24 +161,12 @@ Resources:
             Method: POST
             Path: /auth/confirm
             PayloadFormatVersion: '2.0'
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        EntryPoints:
-          - src/auth/confirm.ts
-        Target: es2022
-        Format: cjs
-        Minify: false
-        Sourcemap: false
-        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
-        OutExtension:
-          - .js=.cjs
 
   LoginFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-login'
-      Handler: src/auth/login.handler
+      Handler: auth.login.handler
       Description: Signs a confirmed user in and returns tokens plus their role.
       Environment:
         Variables:
@@ -213,18 +189,6 @@ Resources:
             Method: POST
             Path: /auth/login
             PayloadFormatVersion: '2.0'
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        EntryPoints:
-          - src/auth/login.ts
-        Target: es2022
-        Format: cjs
-        Minify: false
-        Sourcemap: false
-        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
-        OutExtension:
-          - .js=.cjs
 
   PostConfirmationRole:
     Type: AWS::IAM::Role
@@ -243,21 +207,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-post-confirmation'
-      Handler: src/auth/postConfirmation.handler
+      Handler: auth.post_confirmation.handler
       Description: Adds a confirmed self-service user to the Operator group.
       Role: !GetAtt PostConfirmationRole.Arn
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        EntryPoints:
-          - src/auth/postConfirmation.ts
-        Target: es2022
-        Format: cjs
-        Minify: false
-        Sourcemap: false
-        # .cjs keeps a real module.exports. A .js bundle next to "type": "module" would not export handler.
-        OutExtension:
-          - .js=.cjs
 
   # Separate policy so this function does not depend on the user pool.
   # The user pool invokes the function, so an inline policy on the function would cycle.
