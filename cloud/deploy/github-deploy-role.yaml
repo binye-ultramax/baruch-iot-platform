@@ -8,6 +8,13 @@ Parameters:
     Type: String
     Default: binye-ultramax/baruch-iot-platform
     Description: GitHub owner/repo allowed to assume the deploy role.
+  GitHubImmutableRepository:
+    Type: String
+    Default: binye-ultramax@268897201/baruch-iot-platform@1326517595
+    Description: >
+      Same repository in GitHub's immutable form owner@ownerId/repo@repoId. GitHub sends this
+      form when "immutable subject" is enabled. Read it with:
+      gh api repos/OWNER/REPO/actions/oidc/customization/sub
   GitHubBranch:
     Type: String
     Default: main
@@ -45,7 +52,9 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubRepository}:ref:refs/heads/${GitHubBranch}'
+                token.actions.githubusercontent.com:sub:
+                  - !Sub 'repo:${GitHubRepository}:ref:refs/heads/${GitHubBranch}'
+                  - !Sub 'repo:${GitHubImmutableRepository}:ref:refs/heads/${GitHubBranch}'
       Policies:
         - PolicyName: DeployAuthStack
           PolicyDocument:

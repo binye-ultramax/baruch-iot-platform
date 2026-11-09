@@ -223,3 +223,11 @@ GitHub signs in to AWS with a short-lived role, so no access keys are stored in 
 3. Optional: set the repository variable `AUTH_CORS_ORIGIN` to the dashboard origin. It defaults to `*`.
 
 The role only trusts workflow runs from the `main` branch of this repository, and it can only change the `baruch-auth` stack and the resources inside it.
+
+If the workflow fails with `Not authorized to perform sts:AssumeRoleWithWebIdentity`, check the subject claim GitHub sends:
+
+```bash
+gh api repos/OWNER/REPO/actions/oidc/customization/sub
+```
+
+When `use_immutable_subject` is `true`, the claim uses the form `owner@ownerId/repo@repoId`. Pass that value as the `GitHubImmutableRepository` parameter when deploying `github-deploy-role.yaml`.
