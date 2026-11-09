@@ -1,0 +1,70 @@
+name: Deploy auth API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloud/src/**'
+      - 'cloud/tests/**'
+      - 'cloud/template.yaml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-auth
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-west-2
+  STACK_NAME: baruch-auth
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloud
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build
+        run: sam build
+
+      - name: Deploy
+        run: >
+          sam deploy
+          --stack-name "$STACK_NAME"
+          --region "$AWS_REGION"
+          --resolve-s3
+          --capabilities CAPABILITY_IAM
+          --no-confirm-changeset
+          --no-fail-on-empty-changeset
+          --parameter-overrides "CorsOrigin=${{ vars.AUTH_CORS_ORIGIN || '*' }}"
+
+      - name: Show API URL
+        run: >
+          aws cloudformation describe-stacks
+          --stack-name "$STACK_NAME"
+          --region "$AWS_REGION"
+          --query "Stacks[0].Outputs[?OutputKey=='AuthApiUrl'].OutputValue"
+          --output text
