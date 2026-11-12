@@ -32,7 +32,9 @@ class CreateProductTests(unittest.TestCase):
     @mock.patch("products.create.create_product")
     @mock.patch("products.create.next_serial_number", return_value="BMS-2026-000007")
     def test_admin_gets_a_serial_and_the_row_is_stored(self, _next, create) -> None:
-        create.side_effect = lambda serial, meta, created_by: {"serialNumber": serial, **meta, "createdBy": created_by}
+        create.side_effect = lambda serial, meta, created_by, audit_entry: {
+            "serialNumber": serial, **meta, "createdBy": created_by,
+        }
 
         response = create_handler.handler(_event(ADMIN_CLAIMS, VALID_BODY), None)
 

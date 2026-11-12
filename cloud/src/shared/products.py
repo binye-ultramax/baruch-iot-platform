@@ -28,7 +28,13 @@ def next_serial_number() -> str:
     return format_serial(year, sequence)
 
 
-def create_product(serial_number: str, metadata: dict[str, Any], created_by: str) -> dict[str, Any]:
+def create_product(
+    serial_number: str,
+    metadata: dict[str, Any],
+    created_by: str,
+    audit_entry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Write the product row. When an audit entry is given, both rows land in one transaction."""
     now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     item: dict[str, Any] = {
         "serialNumber": serial_number,
@@ -39,10 +45,24 @@ def create_product(serial_number: str, metadata: dict[str, Any], created_by: str
         **metadata,
     }
 
-    _table(required_env("PRODUCTS_TABLE")).put_item(
-        Item=_to_dynamo(item),
-        ConditionExpression="attribute_not_exists(serialNumber)",
-    )
+    product_put = {
+        "Put": {
+            "TableName": required_env("PRODUCTS_TABLE"),
+            "Item": _to_dynamo(item),
+            "ConditionExpression": "attribute_not_exists(serialNumber)",
+        }
+    }
+
+    if audit_entry is None:
+        _table(required_env("PRODUCTS_TABLE")).put_item(
+            Item=product_put["Put"]["Item"],
+            ConditionExpression=product_put["Put"]["ConditionExpression"],
+        )
+        return item
+
+    from shared.audit import transact_put_item
+
+    _resource().meta.client.transact_write_items(TransactItems=[product_put, transact_put_item(audit_entry)])
     return item
 
 
@@ -89,10 +109,14 @@ def _from_dynamo(item: dict[str, Any]) -> dict[str, Any]:
     return converted
 
 
-def _table(name: str) -> Any:
+def _resource() -> Any:
     global _dynamodb
     if _dynamodb is None:
         import boto3
 
         _dynamodb = boto3.resource("dynamodb")
-    return _dynamodb.Table(name)
+    return _dynamodb
+
+
+def _table(name: str) -> Any:
+    return _resource().Table(name)

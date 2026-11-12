@@ -7,6 +7,8 @@ AuthAction = Literal[
     "create_product",
     "get_product",
     "list_products",
+    "product_history",
+    "audit_by_actor",
 ]
 
 

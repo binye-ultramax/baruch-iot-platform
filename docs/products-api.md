@@ -13,6 +13,8 @@ Authorization: Bearer <idToken>
 | `POST` | `/products` | Administrator | Issue the next serial number and store the unit |
 | `GET` | `/products/{serialNumber}` | Any signed-in user | Read one unit |
 | `GET` | `/products?batch=…` or `?status=…` | Any signed-in user | List units |
+| `GET` | `/products/{serialNumber}/history` | Any signed-in user | Every logged action on one unit |
+| `GET` | `/audit?actor=…` | Administrator | Everything one person did |
 
 ---
 
@@ -113,6 +115,65 @@ Exactly one of `batch` or `status` is required. `limit` defaults to 50, maximum 
 
 ---
 
+## Audit log
+
+Every product action is written to the `BmsProductAuditLog` table at the same moment as the product itself, in one DynamoDB transaction. Either both rows are stored or neither is, so a product can never exist without a record of who created it. Log rows are never updated or deleted.
+
+Each row records:
+
+| Field | Example |
+|-------|---------|
+| `serialNumber` | `BMS-2026-000001` |
+| `occurredAt` | `2026-11-12T14:30:00.123Z#a1b2c3` — millisecond time plus a random suffix |
+| `action` | `PRODUCT_CREATED` |
+| `actorEmail` | `research@ultramax.co.uk` |
+| `actorRole` | `Administrator` |
+| `sourceIp` | caller's IP address |
+| `userAgent` | caller's client |
+| `requestId` | API Gateway request id, for matching CloudWatch logs |
+| `details` | model, batch, cell count, chemistry, capacity, firmware, hardware revision |
+
+`notes` is deliberately left out of `details`.
+
+### History of one unit
+
+`GET /products/{serialNumber}/history` — oldest first.
+
+```powershell
+Invoke-RestMethod -Uri "$BASE/products/BMS-2026-000001/history" -Headers $headers
+```
+
+```json
+{
+  "serialNumber": "BMS-2026-000001",
+  "items": [
+    {
+      "action": "PRODUCT_CREATED",
+      "actorEmail": "research@ultramax.co.uk",
+      "actorRole": "Administrator",
+      "occurredAt": "2026-11-12T14:30:00.123Z#a1b2c3",
+      "sourceIp": "81.2.69.142",
+      "details": { "model": "BMS-16S-100A", "batchNumber": "B2026-11-A", "cellCount": 16, "chemistry": "LiFePO4" }
+    }
+  ],
+  "count": 1
+}
+```
+
+`limit` defaults to 100, maximum 500.
+
+### What one person did
+
+`GET /audit?actor=email` — Administrator only, newest first.
+
+```powershell
+Invoke-RestMethod -Uri "$BASE/audit?actor=research@ultramax.co.uk" -Headers $headers
+```
+
+Reads are not logged. Only actions that change data are recorded.
+
+---
+
 ## Errors
 
 | Status | Message | When |
@@ -123,6 +184,8 @@ Exactly one of `batch` or `status` is required. `limit` defaults to 50, maximum 
 | `400` | `<field> is required.` and similar | Body failed validation. See the field rules above. |
 | `400` | `serialNumber must look like BMS-2026-000001.` | Bad path parameter. |
 | `400` | `Provide a batch or status filter.` | Listing without a filter. |
+| `400` | `Provide an actor email, …` | `/audit` without `?actor=`. |
+| `403` | `Only administrators can do this.` | `/audit` by an Operator. |
 | `404` | `No product with that serial number.` | |
 | `507` | `Serial numbers for 2026 are exhausted.` | 999,999 units issued in one year. |
 
@@ -134,7 +197,9 @@ Exactly one of `batch` or `status` is required. `limit` defaults to 50, maximum 
 
 **`BmsSerialCounters`** — partition key `counterId` (the year, e.g. `2026`). One attribute, `lastSequence`.
 
-Both tables are kept if the stack is deleted.
+**`BmsProductAuditLog`** — partition key `serialNumber`, sort key `occurredAt`. Index `byActor` (`actorEmail`, `occurredAt`). Point-in-time recovery is on. Entries are kept forever.
+
+All three tables are kept if the stack is deleted.
 
 ---
 

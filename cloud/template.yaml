@@ -180,19 +180,57 @@ Resources:
         - Key: Project
           Value: baruch-iot-platform
 
+  # One row per action on a product. Rows are written once and never changed.
+  BmsProductAuditLogTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: BmsProductAuditLog
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: serialNumber
+          AttributeType: S
+        - AttributeName: occurredAt
+          AttributeType: S
+        - AttributeName: actorEmail
+          AttributeType: S
+      KeySchema:
+        - AttributeName: serialNumber
+          KeyType: HASH
+        - AttributeName: occurredAt
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: byActor
+          KeySchema:
+            - AttributeName: actorEmail
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: baruch-iot-platform
+
   CreateProductFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-create-product'
       Handler: products.create.handler
-      Description: Issues the next BMS serial number and stores the unit's factory metadata.
+      Description: Issues the next BMS serial number, stores the unit, and logs who created it.
       Environment:
         Variables:
           PRODUCTS_TABLE: !Ref BmsProductsTable
           SERIAL_COUNTER_TABLE: !Ref BmsSerialCountersTable
+          AUDIT_LOG_TABLE: !Ref BmsProductAuditLogTable
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref BmsProductsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref BmsProductAuditLogTable
         - DynamoDBCrudPolicy:
             TableName: !Ref BmsSerialCountersTable
       Events:
@@ -248,6 +286,52 @@ Resources:
             ApiId: !Ref AuthApi
             Method: GET
             Path: /products
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  ProductHistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-product-history'
+      Handler: products.history.handler
+      Description: Lists every logged action on one BMS product, oldest first.
+      Environment:
+        Variables:
+          AUDIT_LOG_TABLE: !Ref BmsProductAuditLogTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsProductAuditLogTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: GET
+            Path: /products/{serialNumber}/history
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  AuditByActorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-audit-by-actor'
+      Handler: products.audit.handler
+      Description: Lists what one user did across all products, newest first. Administrators only.
+      Environment:
+        Variables:
+          AUDIT_LOG_TABLE: !Ref BmsProductAuditLogTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsProductAuditLogTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: GET
+            Path: /audit
             PayloadFormatVersion: '2.0'
             Auth:
               Authorizer: CognitoJwt
