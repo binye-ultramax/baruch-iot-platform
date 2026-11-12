@@ -1,6 +1,13 @@
 from typing import Literal
 
-AuthAction = Literal["register", "confirm", "login"]
+AuthAction = Literal[
+    "register",
+    "confirm",
+    "login",
+    "create_product",
+    "get_product",
+    "list_products",
+]
 
 
 class HttpError(Exception):

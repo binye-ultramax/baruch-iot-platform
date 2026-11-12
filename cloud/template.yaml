@@ -104,11 +104,153 @@ Resources:
           - content-type
           - authorization
         AllowMethods:
+          - GET
           - POST
           - OPTIONS
       DefaultRouteSettings:
         ThrottlingBurstLimit: 20
         ThrottlingRateLimit: 10
+      Auth:
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: '$request.header.Authorization'
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+              audience:
+                - !Ref UserPoolClient
+
+  # One row per BMS unit that left the factory. Keyed by serial number.
+  BmsProductsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: BmsProducts
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: serialNumber
+          AttributeType: S
+        - AttributeName: batchNumber
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: serialNumber
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: byBatch
+          KeySchema:
+            - AttributeName: batchNumber
+              KeyType: HASH
+            - AttributeName: serialNumber
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: byStatus
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: baruch-iot-platform
+
+  # One row per year holding the last serial sequence issued. Incremented atomically.
+  BmsSerialCountersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: BmsSerialCounters
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: counterId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: counterId
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: baruch-iot-platform
+
+  CreateProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-create-product'
+      Handler: products.create.handler
+      Description: Issues the next BMS serial number and stores the unit's factory metadata.
+      Environment:
+        Variables:
+          PRODUCTS_TABLE: !Ref BmsProductsTable
+          SERIAL_COUNTER_TABLE: !Ref BmsSerialCountersTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref BmsProductsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BmsSerialCountersTable
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /products
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  GetProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-get-product'
+      Handler: products.get.handler
+      Description: Reads one BMS product by serial number.
+      Environment:
+        Variables:
+          PRODUCTS_TABLE: !Ref BmsProductsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsProductsTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: GET
+            Path: /products/{serialNumber}
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  ListProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-list-products'
+      Handler: products.list.handler
+      Description: Lists BMS products by batch or status.
+      Environment:
+        Variables:
+          PRODUCTS_TABLE: !Ref BmsProductsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsProductsTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: GET
+            Path: /products
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
 
   RegisterFunction:
     Type: AWS::Serverless::Function
