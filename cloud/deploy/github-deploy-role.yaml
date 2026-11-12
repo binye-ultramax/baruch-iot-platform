@@ -104,6 +104,25 @@ Resources:
                   - dynamodb:DescribeTimeToLive
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Bms*'
+              - Sid: DeviceKeyKms
+                Effect: Allow
+                Action:
+                  - kms:CreateKey
+                  - kms:DescribeKey
+                  - kms:EnableKeyRotation
+                  - kms:GetKeyRotationStatus
+                  - kms:GetKeyPolicy
+                  - kms:PutKeyPolicy
+                  - kms:ScheduleKeyDeletion
+                  - kms:TagResource
+                  - kms:UntagResource
+                  - kms:ListResourceTags
+                  - kms:UpdateKeyDescription
+                  - kms:CreateAlias
+                  - kms:DeleteAlias
+                  - kms:UpdateAlias
+                  - kms:ListAliases
+                Resource: '*'
               - Sid: FunctionRoles
                 Effect: Allow
                 Action:

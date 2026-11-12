@@ -36,7 +36,7 @@ class CreateWritesAuditTests(unittest.TestCase):
 
         self.assertEqual(response["statusCode"], 201)
         entry = create.call_args.kwargs["audit_entry"]
-        self.assertEqual(entry["serialNumber"], "BMS-2026-000003")
+        self.assertEqual(entry["subjectId"], "BMS-2026-000003")
         self.assertEqual(entry["action"], "PRODUCT_CREATED")
         self.assertEqual(entry["actorEmail"], "admin@baruch.io")
         self.assertEqual(entry["actorRole"], "Administrator")
@@ -45,12 +45,12 @@ class CreateWritesAuditTests(unittest.TestCase):
 
 
 class HistoryTests(unittest.TestCase):
-    @mock.patch("products.history.history_for_product", return_value=[{"action": "PRODUCT_CREATED"}])
+    @mock.patch("products.history.history_for_subject", return_value=[{"action": "PRODUCT_CREATED"}])
     def test_any_signed_in_user_can_read_history(self, history) -> None:
         response = history_handler.handler(_event(OPERATOR, path={"serialNumber": "bms-2026-000001"}), None)
         self.assertEqual(response["statusCode"], 200)
         body = json.loads(response["body"])
-        self.assertEqual(body["serialNumber"], "BMS-2026-000001")
+        self.assertEqual(body["subjectId"], "BMS-2026-000001")
         self.assertEqual(body["count"], 1)
         history.assert_called_once_with("BMS-2026-000001", 100)
 

@@ -117,13 +117,13 @@ Exactly one of `batch` or `status` is required. `limit` defaults to 50, maximum 
 
 ## Audit log
 
-Every product action is written to the `BmsProductAuditLog` table at the same moment as the product itself, in one DynamoDB transaction. Either both rows are stored or neither is, so a product can never exist without a record of who created it. Log rows are never updated or deleted.
+Every product action is written to the `BmsAuditLog` table at the same moment as the product itself, in one DynamoDB transaction. Either both rows are stored or neither is, so a product can never exist without a record of who created it. Log rows are never updated or deleted.
 
 Each row records:
 
 | Field | Example |
 |-------|---------|
-| `serialNumber` | `BMS-2026-000001` |
+| `subjectId` | `BMS-2026-000001` — the serial number for product actions, or the device id (`dev_…`) for device actions |
 | `occurredAt` | `2026-11-12T14:30:00.123Z#a1b2c3` — millisecond time plus a random suffix |
 | `action` | `PRODUCT_CREATED` |
 | `actorEmail` | `research@ultramax.co.uk` |
@@ -145,7 +145,7 @@ Invoke-RestMethod -Uri "$BASE/products/BMS-2026-000001/history" -Headers $header
 
 ```json
 {
-  "serialNumber": "BMS-2026-000001",
+  "subjectId": "BMS-2026-000001",
   "items": [
     {
       "action": "PRODUCT_CREATED",
@@ -197,7 +197,7 @@ Reads are not logged. Only actions that change data are recorded.
 
 **`BmsSerialCounters`** — partition key `counterId` (the year, e.g. `2026`). One attribute, `lastSequence`.
 
-**`BmsProductAuditLog`** — partition key `serialNumber`, sort key `occurredAt`. Index `byActor` (`actorEmail`, `occurredAt`). Point-in-time recovery is on. Entries are kept forever.
+**`BmsAuditLog`** — partition key `subjectId` (serial number or device id), sort key `occurredAt`. Shared with the [devices API](./devices-api.md). Index `byActor` (`actorEmail`, `occurredAt`). Point-in-time recovery is on. Entries are kept forever.
 
 All three tables are kept if the stack is deleted.
 

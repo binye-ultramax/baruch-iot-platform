@@ -9,6 +9,10 @@ AuthAction = Literal[
     "list_products",
     "product_history",
     "audit_by_actor",
+    "register_device",
+    "get_device",
+    "find_device",
+    "rotate_activation_key",
 ]
 
 

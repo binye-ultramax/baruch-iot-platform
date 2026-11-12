@@ -9,26 +9,31 @@ from shared.env import required_env
 PRODUCT_CREATED = "PRODUCT_CREATED"
 STATUS_CHANGED = "STATUS_CHANGED"
 PRODUCT_UPDATED = "PRODUCT_UPDATED"
+DEVICE_REGISTERED = "DEVICE_REGISTERED"
+ACTIVATION_KEY_ROTATED = "ACTIVATION_KEY_ROTATED"
 
 _dynamodb: Any = None
 
 
 def build_entry(
-    serial_number: str,
+    subject_id: str,
     action: str,
     caller: dict[str, Any],
     event: dict[str, Any],
     details: dict[str, Any] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Build one immutable log row. The sort key is millisecond time plus a random suffix."""
+    """Build one immutable log row. subject_id is a serial number or a device id.
+
+    The sort key is millisecond time plus a random suffix so same-moment actions never collide.
+    """
     moment = now or datetime.now(timezone.utc)
     stamp = moment.isoformat(timespec="milliseconds").replace("+00:00", "Z")
     request = event.get("requestContext", {}) or {}
     http = request.get("http", {}) or {}
 
     entry: dict[str, Any] = {
-        "serialNumber": serial_number,
+        "subjectId": subject_id,
         "occurredAt": f"{stamp}#{secrets.token_hex(3)}",
         "action": action,
         "actorEmail": caller["email"],
@@ -51,20 +56,24 @@ def transact_put_item(entry: dict[str, Any]) -> dict[str, Any]:
         "Put": {
             "TableName": required_env("AUDIT_LOG_TABLE"),
             "Item": _to_dynamo(entry),
-            "ConditionExpression": "attribute_not_exists(serialNumber) AND attribute_not_exists(occurredAt)",
+            "ConditionExpression": "attribute_not_exists(subjectId) AND attribute_not_exists(occurredAt)",
         }
     }
 
 
-def history_for_product(serial_number: str, limit: int) -> list[dict[str, Any]]:
+def history_for_subject(subject_id: str, limit: int) -> list[dict[str, Any]]:
     from boto3.dynamodb.conditions import Key
 
     result = _table().query(
-        KeyConditionExpression=Key("serialNumber").eq(serial_number),
+        KeyConditionExpression=Key("subjectId").eq(subject_id),
         Limit=limit,
         ScanIndexForward=True,
     )
     return [_from_dynamo(item) for item in result.get("Items", [])]
+
+
+# Kept for callers that still think in terms of products.
+history_for_product = history_for_subject
 
 
 def actions_by_actor(actor_email: str, limit: int) -> list[dict[str, Any]]:

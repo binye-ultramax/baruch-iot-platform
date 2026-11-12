@@ -180,23 +180,24 @@ Resources:
         - Key: Project
           Value: baruch-iot-platform
 
-  # One row per action on a product. Rows are written once and never changed.
-  BmsProductAuditLogTable:
+  # One row per action on a product or device. subjectId is a serial number or a device id.
+  # Rows are written once and never changed.
+  BmsAuditLogTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: BmsProductAuditLog
+      TableName: BmsAuditLog
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: serialNumber
+        - AttributeName: subjectId
           AttributeType: S
         - AttributeName: occurredAt
           AttributeType: S
         - AttributeName: actorEmail
           AttributeType: S
       KeySchema:
-        - AttributeName: serialNumber
+        - AttributeName: subjectId
           KeyType: HASH
         - AttributeName: occurredAt
           KeyType: RANGE
@@ -225,12 +226,12 @@ Resources:
         Variables:
           PRODUCTS_TABLE: !Ref BmsProductsTable
           SERIAL_COUNTER_TABLE: !Ref BmsSerialCountersTable
-          AUDIT_LOG_TABLE: !Ref BmsProductAuditLogTable
+          AUDIT_LOG_TABLE: !Ref BmsAuditLogTable
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref BmsProductsTable
         - DynamoDBWritePolicy:
-            TableName: !Ref BmsProductAuditLogTable
+            TableName: !Ref BmsAuditLogTable
         - DynamoDBCrudPolicy:
             TableName: !Ref BmsSerialCountersTable
       Events:
@@ -298,10 +299,10 @@ Resources:
       Description: Lists every logged action on one BMS product, oldest first.
       Environment:
         Variables:
-          AUDIT_LOG_TABLE: !Ref BmsProductAuditLogTable
+          AUDIT_LOG_TABLE: !Ref BmsAuditLogTable
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref BmsProductAuditLogTable
+            TableName: !Ref BmsAuditLogTable
       Events:
         Get:
           Type: HttpApi
@@ -321,10 +322,10 @@ Resources:
       Description: Lists what one user did across all products, newest first. Administrators only.
       Environment:
         Variables:
-          AUDIT_LOG_TABLE: !Ref BmsProductAuditLogTable
+          AUDIT_LOG_TABLE: !Ref BmsAuditLogTable
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref BmsProductAuditLogTable
+            TableName: !Ref BmsAuditLogTable
       Events:
         Get:
           Type: HttpApi
@@ -332,6 +333,215 @@ Resources:
             ApiId: !Ref AuthApi
             Method: GET
             Path: /audit
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  # Encrypts each device's instant reading key at rest. Only the register function may encrypt.
+  DeviceKeyEncryptionKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: Encrypts BMS instant reading keys stored in the BmsDevices table.
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AccountAdmin
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: kms:*
+            Resource: '*'
+
+  DeviceKeyEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub 'alias/${AWS::StackName}-device-keys'
+      TargetKeyId: !Ref DeviceKeyEncryptionKey
+
+  # One row per provisioned BMS, ours or external. deviceId is a ULID; serialNumber is optional.
+  BmsDevicesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: BmsDevices
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: deviceId
+          AttributeType: S
+        - AttributeName: serialNumber
+          AttributeType: S
+      KeySchema:
+        - AttributeName: deviceId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        # Sparse: only factory units carry a serialNumber, so only they appear here.
+        - IndexName: bySerial
+          KeySchema:
+            - AttributeName: serialNumber
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: baruch-iot-platform
+
+  # One row per MAC address, pointing at its device. Written in the same transaction as the device
+  # so a MAC can never be registered twice.
+  BmsDeviceMacsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: BmsDeviceMacs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: macAddress
+          AttributeType: S
+      KeySchema:
+        - AttributeName: macAddress
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: baruch-iot-platform
+
+  RegisterDeviceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-register-device'
+      Handler: devices.register.handler
+      Description: Registers a BMS with a MAC address, generating its device id and both keys.
+      Environment:
+        Variables:
+          DEVICES_TABLE: !Ref BmsDevicesTable
+          DEVICE_MACS_TABLE: !Ref BmsDeviceMacsTable
+          PRODUCTS_TABLE: !Ref BmsProductsTable
+          AUDIT_LOG_TABLE: !Ref BmsAuditLogTable
+          DEVICE_KEY_KMS_ARN: !GetAtt DeviceKeyEncryptionKey.Arn
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref BmsDevicesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref BmsDeviceMacsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BmsProductsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref BmsAuditLogTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: kms:Encrypt
+              Resource: !GetAtt DeviceKeyEncryptionKey.Arn
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /devices
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  GetDeviceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-get-device'
+      Handler: devices.get.handler
+      Description: Reads one device by id. Keys are never returned.
+      Environment:
+        Variables:
+          DEVICES_TABLE: !Ref BmsDevicesTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsDevicesTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: GET
+            Path: /devices/{deviceId}
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  FindDeviceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-find-device'
+      Handler: devices.find.handler
+      Description: Finds a device by MAC address or serial number.
+      Environment:
+        Variables:
+          DEVICES_TABLE: !Ref BmsDevicesTable
+          DEVICE_MACS_TABLE: !Ref BmsDeviceMacsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsDevicesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsDeviceMacsTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: GET
+            Path: /devices
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  RotateActivationKeyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-rotate-activation-key'
+      Handler: devices.rotate_key.handler
+      Description: Issues a replacement activation key. The old key stops working.
+      Environment:
+        Variables:
+          DEVICES_TABLE: !Ref BmsDevicesTable
+          AUDIT_LOG_TABLE: !Ref BmsAuditLogTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref BmsDevicesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref BmsAuditLogTable
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /devices/{deviceId}/activation-key
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: CognitoJwt
+
+  DeviceHistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-device-history'
+      Handler: products.history.handler
+      Description: Lists every logged action on one device, oldest first.
+      Environment:
+        Variables:
+          AUDIT_LOG_TABLE: !Ref BmsAuditLogTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BmsAuditLogTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: GET
+            Path: /devices/{deviceId}/history
             PayloadFormatVersion: '2.0'
             Auth:
               Authorizer: CognitoJwt

@@ -23,7 +23,7 @@ class BuildEntryTests(unittest.TestCase):
         when = datetime(2026, 11, 12, 14, 30, 0, 123000, tzinfo=timezone.utc)
         entry = build_entry("BMS-2026-000001", PRODUCT_CREATED, CALLER, EVENT, {"model": "X"}, now=when)
 
-        self.assertEqual(entry["serialNumber"], "BMS-2026-000001")
+        self.assertEqual(entry["subjectId"], "BMS-2026-000001")
         self.assertTrue(entry["occurredAt"].startswith("2026-11-12T14:30:00.123Z#"))
         self.assertEqual(len(entry["occurredAt"].split("#")[1]), 6)
         self.assertEqual(entry["action"], PRODUCT_CREATED)
@@ -59,7 +59,7 @@ class TransactPutTests(unittest.TestCase):
         previous = os.environ.get("AUDIT_LOG_TABLE")
         os.environ["AUDIT_LOG_TABLE"] = "BmsProductAuditLog"
         try:
-            put = transact_put_item({"serialNumber": "S", "occurredAt": "T", "details": {"capacityAh": 100.5}})["Put"]
+            put = transact_put_item({"subjectId": "S", "occurredAt": "T", "details": {"capacityAh": 100.5}})["Put"]
         finally:
             if previous is None:
                 os.environ.pop("AUDIT_LOG_TABLE", None)

@@ -12,6 +12,7 @@ Documentation for the Baruch IoT Platform, a fleet monitoring system for battery
 | [user-guide.md](./user-guide.md) | End-user guide for the web dashboard |
 | [auth-api.md](./auth-api.md) | How to register, confirm, and sign in through the auth API |
 | [products-api.md](./products-api.md) | Issue BMS serial numbers, store factory metadata, and read the audit log |
+| [devices-api.md](./devices-api.md) | Register a BMS by MAC address and issue its instant reading and activation keys |
 | [roadmap.md](./roadmap.md) | Planned phases and future work |
 
 ## Repository layout
@@ -19,7 +20,7 @@ Documentation for the Baruch IoT Platform, a fleet monitoring system for battery
 ```
 baruch-iot-platform/
 ├── web/        # React web dashboard (implemented)
-├── cloud/      # Auth and products APIs (Cognito, Lambda, DynamoDB)
+├── cloud/      # Auth, products, and devices APIs (Cognito, Lambda, DynamoDB, KMS)
 ├── embedded/   # Device firmware (planned)
 └── docs/       # Product and technical documentation
 ```
