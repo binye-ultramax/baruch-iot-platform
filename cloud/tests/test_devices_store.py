@@ -65,10 +65,12 @@ class RegisterDeviceStoreTests(unittest.TestCase):
 
     def test_factory_unit_marks_product_shipped(self) -> None:
         self.resource.Table.return_value.get_item.return_value = {
-            "Item": {"serialNumber": "BMS-2026-000001", "status": "MANUFACTURED", "model": "BMS-16S"}
+            "Item": {"serialNumber": "BMS-2026-000001", "status": "MANUFACTURED", "model": "BMS-16S", "firmwareVersion": "1.0"}
         }
         result = devices.register_device(
-            {"macAddress": "AA:BB:CC:DD:EE:FF", "serialNumber": "BMS-2026-000001"}, "admin@x", self._audit
+            {"macAddress": "AA:BB:CC:DD:EE:FF", "serialNumber": "BMS-2026-000001", "manufacturer": "Other", "model": "Wrong"},
+            "admin@x",
+            self._audit,
         )
 
         writes = self.resource.meta.client.transact_write_items.call_args.kwargs["TransactItems"]
@@ -77,8 +79,17 @@ class RegisterDeviceStoreTests(unittest.TestCase):
         self.assertEqual(update["TableName"], "BmsProducts")
         self.assertEqual(update["ExpressionAttributeValues"][":shipped"], "SHIPPED")
         self.assertEqual(result["origin"], "FACTORY")
+        # The product record wins over whatever the body said.
         self.assertEqual(result["model"], "BMS-16S")
         self.assertEqual(result["manufacturer"], "Baruch")
+        self.assertEqual(result["firmwareVersion"], "1.0")
+
+    def test_factory_unit_accepts_newer_firmware_from_body(self) -> None:
+        self.resource.Table.return_value.get_item.return_value = {"Item": {"status": "MANUFACTURED", "firmwareVersion": "1.0"}}
+        result = devices.register_device(
+            {"macAddress": "AA:BB:CC:DD:EE:FF", "serialNumber": "BMS-2026-000001", "firmwareVersion": "1.1"}, "a", self._audit
+        )
+        self.assertEqual(result["firmwareVersion"], "1.1")
 
     def test_unknown_serial_is_404(self) -> None:
         self.resource.Table.return_value.get_item.return_value = {}

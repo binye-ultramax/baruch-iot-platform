@@ -50,6 +50,28 @@ def parse_login_body(value: object) -> LoginInput:
     }
 
 
+class RefreshInput(TypedDict):
+    userId: str
+    refreshToken: str
+
+
+def parse_refresh_body(value: object) -> RefreshInput:
+    body = _as_record(value)
+    return {
+        "userId": _parse_token_field(body.get("userId"), "userId", 128),
+        "refreshToken": _parse_token_field(body.get("refreshToken"), "refreshToken", 4096),
+    }
+
+
+def _parse_token_field(value: object, field: str, max_length: int) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise HttpError(400, f"{field} is required.")
+    text = value.strip()
+    if len(text) > max_length or CONTROL_CHARS.search(text) or " " in text:
+        raise HttpError(400, f"{field} is not valid.")
+    return text
+
+
 def _as_record(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise HttpError(400, "Request body must be a JSON object.")

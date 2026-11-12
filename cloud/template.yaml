@@ -626,6 +626,33 @@ Resources:
             Path: /auth/login
             PayloadFormatVersion: '2.0'
 
+  RefreshFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-refresh'
+      Handler: auth.refresh.handler
+      Description: Exchanges a refresh token for new id and access tokens.
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          USER_POOL_CLIENT_SECRET: !GetAtt UserPoolClient.ClientSecret
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminInitiateAuth
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /auth/refresh
+            PayloadFormatVersion: '2.0'
+
   PostConfirmationRole:
     Type: AWS::IAM::Role
     Properties:

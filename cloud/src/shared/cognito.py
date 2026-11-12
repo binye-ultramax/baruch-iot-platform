@@ -55,23 +55,54 @@ def login(email: str, password: str) -> dict[str, Any]:
 
     profile = _profile_from_id_token(id_token)
     groups = _list_group_names(required_env("USER_POOL_ID"), email)
+    return _session(profile, groups, result, fallback_email=email)
+
+
+def refresh(user_id: str, refresh_token: str) -> dict[str, Any]:
+    """Exchange a refresh token for new id and access tokens.
+
+    Cognito requires the SECRET_HASH for this flow to be built from the user's sub, which is
+    why the client sends back the `user.id` it received at login.
+    """
+    response = _cognito().admin_initiate_auth(
+        UserPoolId=required_env("USER_POOL_ID"),
+        ClientId=required_env("USER_POOL_CLIENT_ID"),
+        AuthFlow="REFRESH_TOKEN_AUTH",
+        AuthParameters={
+            "REFRESH_TOKEN": refresh_token,
+            "SECRET_HASH": secret_hash(user_id),
+        },
+    )
+
+    result = response.get("AuthenticationResult") or {}
+    id_token = result.get("IdToken")
+    if not id_token or not result.get("AccessToken"):
+        raise RuntimeError("Authentication result missing tokens")
+
+    profile = _profile_from_id_token(id_token)
+    # The id token carries group membership, so no admin lookup is needed here.
+    return _session(profile, profile.get("groups", []), result, fallback_email="")
+
+
+def _session(profile: dict[str, Any], groups: list[str], result: dict[str, Any], fallback_email: str) -> dict[str, Any]:
     tokens: dict[str, Any] = {
-        "idToken": id_token,
-        "accessToken": access_token,
+        "idToken": result["IdToken"],
+        "accessToken": result["AccessToken"],
         "expiresIn": result.get("ExpiresIn") or 3600,
     }
     refresh_token = result.get("RefreshToken")
     if refresh_token:
         tokens["refreshToken"] = refresh_token
 
-    return {
-        "user": {
-            "email": profile.get("email") or email,
-            "name": profile.get("name") or email,
-            "role": role_from_groups(groups),
-        },
-        "tokens": tokens,
+    user: dict[str, Any] = {
+        "email": profile.get("email") or fallback_email,
+        "name": profile.get("name") or profile.get("email") or fallback_email,
+        "role": role_from_groups(groups),
     }
+    if profile.get("sub"):
+        user["id"] = profile["sub"]
+
+    return {"user": user, "tokens": tokens}
 
 
 def ensure_operator_group(user_pool_id: str, username: str) -> None:
@@ -108,7 +139,7 @@ def _list_group_names(user_pool_id: str, username: str) -> list[str]:
             return names
 
 
-def _profile_from_id_token(id_token: str) -> dict[str, str]:
+def _profile_from_id_token(id_token: str) -> dict[str, Any]:
     """Read claims from a token Cognito just issued to this Lambda. This is not a general JWT verifier."""
     try:
         segment = id_token.split(".")[1]
@@ -121,13 +152,14 @@ def _profile_from_id_token(id_token: str) -> dict[str, str]:
     except (json.JSONDecodeError, ValueError):
         return {}
 
-    profile: dict[str, str] = {}
-    email = payload.get("email")
-    name = payload.get("name")
-    if isinstance(email, str):
-        profile["email"] = email
-    if isinstance(name, str):
-        profile["name"] = name
+    profile: dict[str, Any] = {}
+    for claim in ("sub", "email", "name"):
+        value = payload.get(claim)
+        if isinstance(value, str):
+            profile[claim] = value
+    groups = payload.get("cognito:groups")
+    if isinstance(groups, list):
+        profile["groups"] = [group for group in groups if isinstance(group, str)]
     return profile
 
 

@@ -1,9 +1,11 @@
 # Product Requirements Document (PRD)
 
 **Product:** Baruch IoT Platform  
-**Version:** 0.1 (MVP — mock data)  
-**Last updated:** August 2025  
+**Version:** 0.2 (web MVP on mock data; cloud auth, products, and devices APIs live)  
+**Last updated:** November 2026  
 **Status:** In development
+
+> Internal document. Sections 1–11 describe the web dashboard MVP as originally specified and are unchanged. Section 2.4 records what the cloud backend now delivers beyond that scope. The API itself is documented for app developers in [docs/api](../api/README.md).
 
 ---
 
@@ -62,6 +64,31 @@ The MVP delivers a **static, mock-data web dashboard** that validates UX and inf
 - Alerting and notifications delivery
 - Device configuration write-back
 - Multi-tenant organization management
+
+### 2.4 Backend delivered (November 2026)
+
+The following moved from "out of scope" to delivered, as a cloud API consumed by partner apps. The web dashboard does not use it yet.
+
+| Capability | Requirement met | Reference |
+|------------|-----------------|-----------|
+| Real user accounts | Email + password sign-up with email confirmation; sign-in returns JWTs; 1-hour sessions refreshable for 30 days | [auth.md](../api/auth.md) |
+| Roles | Operator (default) and Administrator, enforced server-side | [API Guide — Roles](../api/README.md#roles) |
+| Factory inventory | Every BMS built by Baruch gets a unique serial number and a specification record | [products.md](../api/products.md) |
+| Device provisioning | A BMS (ours or third-party) is registered by MAC address and receives an instant reading key and an activation key | [devices.md](../api/devices.md) |
+| Audit trail | Every create/rotate action records who, when, from where | products.md / devices.md history sections |
+
+New user stories introduced by this scope:
+
+| ID | Story | Status |
+|----|-------|--------|
+| ACCT-01 | As a new user, I can create an account and confirm my email so that I can sign in | Done |
+| ACCT-02 | As a signed-in user, my app keeps me signed in without re-entering my password for up to 30 days | Done |
+| ACCT-03 | As a user who forgot my password, I can reset it by email | Planned (Phase 3) |
+| FACT-01 | As a factory administrator, I can issue a serial number and record a unit's specification | Done |
+| PROV-01 | As an administrator, I can register a BMS by MAC address and receive its keys once | Done |
+| PROV-02 | As an administrator, I can replace a lost activation key | Done |
+| PROV-03 | As an operator, I can look up a device by MAC or serial number | Done |
+| PROV-04 | As an end user, I can activate a BMS with its activation key | Planned (Phase 4) |
 
 ---
 

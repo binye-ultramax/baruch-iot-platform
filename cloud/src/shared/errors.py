@@ -4,6 +4,7 @@ AuthAction = Literal[
     "register",
     "confirm",
     "login",
+    "refresh",
     "create_product",
     "get_product",
     "list_products",
@@ -74,5 +75,13 @@ def map_cognito_error(error: object, action: AuthAction) -> HttpError | None:
             return HttpError(403, "Password reset is required.")
         if name in ("NotAuthorizedException", "UserNotFoundException"):
             return HttpError(401, "Invalid email or password.")
+
+    if action == "refresh":
+        if name in ("NotAuthorizedException", "UserNotFoundException", "InvalidParameterException"):
+            return HttpError(401, "Session has expired. Sign in again.")
+        if name == "UserNotConfirmedException":
+            return HttpError(403, "Confirm your email before signing in.")
+        if name == "PasswordResetRequiredException":
+            return HttpError(403, "Password reset is required.")
 
     return None

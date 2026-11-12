@@ -56,12 +56,18 @@ def register_device(
         "updatedAt": now,
     }
     if product:
+        # Factory units are described by their product record; only the firmware may be newer.
         item["serialNumber"] = serial
-        item["model"] = product.get("model")
         item["manufacturer"] = "Baruch"
-    for field in ("manufacturer", "model", "firmwareVersion"):
-        if body.get(field):
-            item[field] = body[field]
+        if product.get("model"):
+            item["model"] = product["model"]
+        firmware = body.get("firmwareVersion") or product.get("firmwareVersion")
+        if firmware:
+            item["firmwareVersion"] = firmware
+    else:
+        for field in ("manufacturer", "model", "firmwareVersion"):
+            if body.get(field):
+                item[field] = body[field]
 
     devices_table = required_env("DEVICES_TABLE")
     macs_table = required_env("DEVICE_MACS_TABLE")

@@ -2,6 +2,8 @@
 
 Guide for using the Baruch IoT Platform web dashboard.
 
+> **Status (November 2026):** the dashboard still runs on **mock data** and mock accounts. It is not connected to the live cloud API. The accounts below do not exist in the real user pool. For the live API, see [docs/api](../api/README.md).
+
 ---
 
 ## Getting started
