@@ -74,8 +74,8 @@ The following moved from "out of scope" to delivered, as a cloud API consumed by
 | Real user accounts | Email + password sign-up with email confirmation; sign-in returns JWTs; 1-hour sessions refreshable for 30 days | [auth.md](../api/auth.md) |
 | Roles | Operator (default) and Administrator, enforced server-side | [API Guide — Roles](../api/README.md#roles) |
 | Factory inventory | Every BMS built by Baruch gets a unique serial number and a specification record | [products.md](../api/products.md) |
-| Device provisioning | A BMS (ours or third-party) is registered by MAC address and receives an instant reading key and an activation key | [devices.md](../api/devices.md) |
-| Audit trail | Every create/rotate action records who, when, from where | products.md / devices.md history sections |
+| BMS provisioning | A BMS (ours or third-party) is registered by MAC address and receives an instant reading key and an activation key | [bms.md](../api/bms.md) |
+| Audit trail | Every create/rotate action records who, when, from where | products.md / bms.md history sections |
 
 New user stories introduced by this scope:
 

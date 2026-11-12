@@ -1,6 +1,6 @@
 # Products API
 
-A **product** is a BMS unit built in the Baruch factory. Creating one issues its serial number and records its specification. Products are the factory's inventory; a product becomes a **device** when it is registered with a MAC address through the [Devices API](./devices.md).
+A **product** is a BMS unit built in the Baruch factory. Creating one issues its serial number and records its specification. Products are the factory's inventory; a product becomes a registered **BMS** when it is given a MAC address through the [BMS API](./bms.md).
 
 All routes need `Authorization: Bearer <idToken>` (see [API Guide](./README.md#authentication-in-four-steps)).
 
@@ -175,7 +175,7 @@ curl -s "$BASE/products/BMS-2026-000001/history" -H "Authorization: Bearer <idTo
 
 `limit` defaults to 100, maximum 500. Only actions that change data are logged; reads are not.
 
-Note that once a product is registered as a device, the device's own actions are logged under the device id, not the serial number. Use [`GET /devices/{deviceId}/history`](./devices.md#history-of-one-device) for those.
+Note that once a product is registered as a BMS, later actions are logged under the BMS id (`deviceId`), not the serial number. Use [`GET /devices/{deviceId}/history`](./bms.md#history-of-one-bms) for those.
 
 ---
 

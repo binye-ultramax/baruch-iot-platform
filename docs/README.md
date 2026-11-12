@@ -10,8 +10,8 @@ Documentation for the Baruch IoT Platform, a monitoring and provisioning system 
 |----------|-------------|
 | [api/README.md](./api/README.md) | Start here: base URL, authentication, roles, conventions, error format |
 | [api/auth.md](./api/auth.md) | Register, confirm, sign in, refresh — with JavaScript, Kotlin, and Swift examples |
-| [api/products.md](./api/products.md) | Factory records and serial numbers for BMS units built by Baruch |
-| [api/devices.md](./api/devices.md) | Register a BMS by MAC address, receive its keys, find it, read its history |
+| [api/products.md](./api/products.md) | Factory API: issue serial numbers and store metadata for BMS units Baruch built |
+| [api/bms.md](./api/bms.md) | Register a BMS by MAC address, receive its keys, find it, read its history |
 
 ## For the Baruch team — `docs/internal/`
 

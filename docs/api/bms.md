@@ -1,11 +1,13 @@
-# Devices API
+# BMS API
 
-A **device** is a BMS that the platform knows by its MAC address. Registering a device gives it a permanent `deviceId` and two secrets the hardware needs:
+Register a **BMS** on the platform by MAC address. That gives it a permanent id (`deviceId` in the JSON — kept for compatibility with the live routes under `/devices`) and two secrets the hardware needs:
 
 - **Instant reading key** — used by the BMS to send live readings. Shown once.
 - **Activation key** — a short code (`K7PM-3XQD-R9HT-WB2N`) the end user types in to pair the BMS. Shown once; can be replaced.
 
-A device is either a unit Baruch built (it has a serial number from the [Products API](./products.md)) or a third-party unit (no serial number, a manufacturer name instead). Both get the same kind of record.
+A BMS is either a unit Baruch built (it has a serial number from the [Products API](./products.md)) or a third-party unit (no serial number, a manufacturer name instead). Both get the same kind of record.
+
+> **Naming note:** In this doc we say “BMS”. The HTTP paths and JSON fields still use `device` / `deviceId` / `/devices` because that is what the deployed API returns today.
 
 All routes need `Authorization: Bearer <idToken>` (see [API Guide](./README.md#authentication-in-four-steps)).
 
@@ -19,7 +21,7 @@ All routes need `Authorization: Bearer <idToken>` (see [API Guide](./README.md#a
 
 ---
 
-## Device ids
+## BMS ids (`deviceId`)
 
 ```text
 dev_01JCMK3Q7X8R2N5VBHT9AZW4E6
@@ -29,7 +31,7 @@ dev_01JCMK3Q7X8R2N5VBHT9AZW4E6
 
 ---
 
-## The device record
+## The BMS record
 
 ```json
 {
@@ -59,7 +61,7 @@ The two secrets are **never** part of the record. They appear only in the respon
 
 ---
 
-## Register a device
+## Register a BMS
 
 `POST /devices` — Administrator only.
 
@@ -126,7 +128,7 @@ Registration is all-or-nothing: if any check fails, nothing is stored. For facto
 
 ---
 
-## Read one device
+## Read one BMS
 
 `GET /devices/{deviceId}`
 
@@ -143,7 +145,7 @@ Returns the device record (no secrets).
 
 ---
 
-## Find a device
+## Find a BMS
 
 `GET /devices?mac=AA:BB:CC:DD:EE:01` or `GET /devices?serial=BMS-2026-000001`. Exactly one of the two.
 
@@ -200,7 +202,7 @@ Four groups of four characters separated by dashes: `XXXX-XXXX-XXXX-XXXX`. The a
 
 ---
 
-## History of one device
+## History of one BMS
 
 `GET /devices/{deviceId}/history` — oldest first. `limit` defaults to 100, maximum 500.
 

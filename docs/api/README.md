@@ -9,7 +9,7 @@ It covers everything you need to call the API; nothing here depends on knowing h
 | This page | Base URL, authentication, request and response conventions, error format |
 | [auth.md](./auth.md) | Create an account, confirm it, sign in, refresh the session |
 | [products.md](./products.md) | Factory records for BMS units built by Baruch (serial numbers and metadata) |
-| [devices.md](./devices.md) | Register a BMS by MAC address, receive its keys, look it up, read its history |
+| [bms.md](./bms.md) | Register a BMS by MAC address, receive its keys, look it up, read its history |
 
 ---
 
@@ -94,7 +94,7 @@ Two `401` cases look slightly different: when the token itself is rejected, the 
 
 ## Secrets returned once
 
-`POST /devices` and `POST /devices/{deviceId}/activation-key` return secrets (`instantReadingKey`, `activationKey`) **only in that response**. They cannot be fetched again. If your app displays them, give the user a way to copy them before leaving the screen. See [devices.md](./devices.md).
+`POST /devices` and `POST /devices/{deviceId}/activation-key` return secrets (`instantReadingKey`, `activationKey`) **only in that response**. They cannot be fetched again. If your app displays them, give the user a way to copy them before leaving the screen. See [bms.md](./bms.md).
 
 ---
 
