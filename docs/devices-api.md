@@ -12,7 +12,7 @@ All routes require a Cognito ID token from [`POST /auth/login`](./auth-api.md):
 $BASE = "https://v8yde6qhhh.execute-api.eu-west-2.amazonaws.com"
 $login = Invoke-RestMethod -Method Post -Uri "$BASE/auth/login" -ContentType "application/json" `
   -Body '{"email":"research@ultramax.co.uk","password":"Baruch2026!"}'
-$headers = @{ Authorization = "Bearer $($login.idToken)" }
+$headers = @{ Authorization = "Bearer $($login.tokens.idToken)" }
 ```
 
 ---
