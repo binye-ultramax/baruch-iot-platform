@@ -40,7 +40,7 @@ The account cannot sign in until it is confirmed. The code expires after 24 hour
 ```bash
 curl -s -X POST "$BASE/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"<password>","name":"Your Name"}'
+  -d '{"email":"operator@example.com","password":"<password>","name":"Your Name"}'
 ```
 
 | Field | Required | Rules |
@@ -53,7 +53,7 @@ curl -s -X POST "$BASE/auth/register" \
 
 ```json
 {
-  "email": "you@example.com",
+  "email": "operator@example.com",
   "confirmationRequired": true
 }
 ```
@@ -80,7 +80,7 @@ Validate the password rules on the client before calling, so the user gets insta
 ```bash
 curl -s -X POST "$BASE/auth/confirm" \
   -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","code":"123456"}'
+  -d '{"email":"operator@example.com","code":"123456"}'
 ```
 
 | Field | Required | Rules |
@@ -92,7 +92,7 @@ curl -s -X POST "$BASE/auth/confirm" \
 
 ```json
 {
-  "email": "you@example.com",
+  "email": "operator@example.com",
   "confirmed": true
 }
 ```
@@ -117,7 +117,7 @@ There is no "resend code" route yet. If the code is lost, register again with th
 ```bash
 curl -s -X POST "$BASE/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"<password>"}'
+  -d '{"email":"operator@example.com","password":"<password>"}'
 ```
 
 | Field | Required |
@@ -131,7 +131,7 @@ curl -s -X POST "$BASE/auth/login" \
 {
   "user": {
     "id": "36a25274-6001-706d-5913-adf36a8d1e90",
-    "email": "you@example.com",
+    "email": "operator@example.com",
     "name": "Your Name",
     "role": "Operator"
   },
@@ -185,7 +185,7 @@ curl -s -X POST "$BASE/auth/refresh" \
 
 ```json
 {
-  "user": { "id": "36a2…", "email": "you@example.com", "name": "Your Name", "role": "Operator" },
+  "user": { "id": "36a2…", "email": "operator@example.com", "name": "Your Name", "role": "Operator" },
   "tokens": { "idToken": "eyJraWQiOi...", "accessToken": "eyJraWQiOi...", "expiresIn": 3600 }
 }
 ```

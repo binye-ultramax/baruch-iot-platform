@@ -1,6 +1,8 @@
 # Baruch IoT Platform — API Guide
 
-This folder is for app developers building against the Baruch IoT Platform API. It covers everything you need to call the API; nothing here depends on knowing how the backend is built.
+**Safe to share.** This folder (`docs/api/`) is written for app developers. It has no passwords, no AWS account details, and no deploy instructions. Share this folder only — do not share `docs/internal/`.
+
+It covers everything you need to call the API; nothing here depends on knowing how the backend is built.
 
 | Document | What it covers |
 |----------|----------------|
@@ -104,7 +106,7 @@ BASE=https://v8yde6qhhh.execute-api.eu-west-2.amazonaws.com
 # Sign in
 curl -s -X POST "$BASE/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"<password>"}'
+  -d '{"email":"operator@example.com","password":"<password>"}'
 
 # Use the idToken from the response
 curl -s "$BASE/products?status=MANUFACTURED" \

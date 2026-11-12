@@ -4,7 +4,7 @@ Documentation for the Baruch IoT Platform, a monitoring and provisioning system 
 
 ## For app developers — `docs/api/`
 
-Share this folder with anyone building against the API. It contains no infrastructure details or credentials.
+**Share only this folder** with anyone building against the API. Examples use fake emails (`operator@example.com`, `admin@example.com`) and the placeholder `<password>`. No real credentials, AWS account details, or deploy steps.
 
 | Document | Description |
 |----------|-------------|
@@ -43,7 +43,7 @@ baruch-iot-platform/
 ```bash
 BASE=https://v8yde6qhhh.execute-api.eu-west-2.amazonaws.com
 curl -s -X POST "$BASE/auth/login" -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"<password>"}'
+  -d '{"email":"operator@example.com","password":"<password>"}'
 ```
 
 Then follow [api/README.md](./api/README.md).

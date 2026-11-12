@@ -27,6 +27,8 @@ Use one of the mock accounts:
 | admin@baruch.io | admin123 | Administrator |
 | operator@baruch.io | baruch2025 | Operator |
 
+These exist only in `web/src/data/mockUsers.ts`. They are **not** Cognito accounts and must not be used against the live API.
+
 After signing in you are redirected to the **Device Fleet** page.
 
 ---

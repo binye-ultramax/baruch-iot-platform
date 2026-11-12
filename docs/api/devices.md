@@ -103,7 +103,7 @@ curl -s -X POST "$BASE/devices" \
   "registeredBy": "admin@example.com",
   "registeredAt": "2026-11-12T15:00:00Z",
   "updatedAt": "2026-11-12T15:00:00Z",
-  "instantReadingKey": "pLSX1rHFRiJgWMBO6n-nZmmSj32qZLzfga0xmZAhiEI",
+  "instantReadingKey": "EXAMPLE_instant_reading_key_replace_me_not_real",
   "activationKey": "K7PM-3XQD-R9HT-WB2N"
 }
 ```
